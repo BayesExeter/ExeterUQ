@@ -13,6 +13,6 @@ and predictions.
 
 `HistoryMatching` contains all the necassary R files to perform and visualize history matching and iterative refocussing.
 
-`Demonstartions` contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
+`Demonstrations` contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
 
 
