@@ -104,6 +104,8 @@ SetDiscrepancy <- function(tBasis, q, obs, level = 0.95, weightinv = NULL){
 #' @param Error observation error variance matrix
 #' @param Disc discrepancy variance matrix
 #' @param weightinv if not NULL, the inverse of W = var_err + var_disc, used for projection
+#' @param Design if not NULL, passes a design at which to evaluate emulators and implausibility
+#' @param PreviousWave if not NULL, provides the output of a previous PredictAndHM object, and evaluates the current NROY points from the previous design
 #' #' 
 #' @return \impl{Design}{Space-filling design of ns points at which the emulators were evaluated}
 #' \item{Expectation}{Emulator expectations}
@@ -114,11 +116,22 @@ SetDiscrepancy <- function(tBasis, q, obs, level = 0.95, weightinv = NULL){
 #' \item{inNROY}{Vector indicating whether a parameter setting is ruled out}
 #'
 #' @export
-PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, weightinv = NULL, BasisUncertainty = FALSE){
+PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, weightinv = NULL, BasisUncertainty = FALSE,
+                         Design = NULL, PreviousWave = NULL){
   T_f <- qchisq(0.995, dim(DataBasis$tBasis)[1]) # bound for ruling out on field
   npar <- which(colnames(tData) == "Noise") - 1
-  Design <- 2*as.data.frame(randomLHS(ns, npar)) - 1
-  colnames(Design) <- colnames(tData)[1:npar]
+  
+  design_flag <- !(is.null(Design))
+  
+  if (is.null(Design) & is.null(PreviousWave)){
+    Design <- 2*as.data.frame(randomLHS(ns, npar)) - 1
+    colnames(Design) <- colnames(tData)[1:npar]
+  }
+  
+  if (!(is.null(PreviousWave))){
+    inNROY_inds <- which(PreviousWave$inNROY == TRUE)
+    Design <- PreviousWave$Design[inNROY_inds,] # only evaluate at not ruled out points
+  }
   
   EmOutput <- lapply(1:length(Ems), function(e) EMULATOR.gpstan(Design,Ems[[e]], FastVersion = TRUE))
   Expectation <- Variance <- matrix(0, nrow = dim(Design)[1], ncol = length(Ems))
@@ -128,7 +141,17 @@ PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, wei
   }
   
   FieldHM <- HistoryMatch(DataBasis, Obs, Expectation, Variance, Error, Disc, weightinv = weightinv)
-  print("Proportion of space not ruled out:")
+
+  if (!(is.null(PreviousWave))){
+    FieldHM$nroy <- PreviousWave$nroy * FieldHM$nroy
+  }
+  
+  if (design_flag == TRUE){
+    print("Proportion of given design not ruled out:")
+  }
+  else {
+    print("Proportion of original space not ruled out:")
+  }
   print(FieldHM$nroy)
   return(list(Design = Design, Expectation = Expectation, Variance = Variance, impl = FieldHM$impl, bound = FieldHM$bound, nroy = FieldHM$nroy, inNROY = FieldHM$inNROY))
 }
