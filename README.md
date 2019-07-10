@@ -21,4 +21,6 @@ We treat a complex computer model (simulator) as a mathematical function $f$, th
 
 We specify a Gaussian process distribution for $f(\boldsymbol{x})$ determined by the mean function 
 
-$$E[f(\boldsymbol{x})]=h(\boldsymbol{x})^T\boldsymbol{\beta}=\sum_{i=1}^p\beta_ih_i(\boldsymbol{x})$$
+```math
+E[f(\boldsymbol{x})]=h(\boldsymbol{x})^T\boldsymbol{\beta}=\sum_{i=1}^p\beta_ih_i(\boldsymbol{x})
+```
