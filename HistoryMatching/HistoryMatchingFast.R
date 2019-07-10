@@ -138,8 +138,9 @@ PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, wei
   for (j in 1:length(Ems)){
     Expectation[,j] <- EmOutput[[j]]$Expectation
     Variance[,j] <- EmOutput[[j]]$Variance
+    Variance[is.na(EmOutput[[j]]$Variance),j] <- 0
   }
-  
+
   FieldHM <- HistoryMatch(DataBasis, Obs, Expectation, Variance, Error, Disc, weightinv = weightinv)
 
   if (!(is.null(PreviousWave))){
