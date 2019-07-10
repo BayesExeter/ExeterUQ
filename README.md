@@ -16,3 +16,9 @@ and predictions.
 `Demonstartions` contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
 
 ## Introduction to Gaussian Process Emulators
+
+We treat a complex computer model (simulator) as a mathematical function $f$, that takes varying values of input parameters denoted by a vector $\boldsymbol{x}=(x_1, \dots, x_p)\in\mathrm{R}^p$, and returns output $f(\boldsymbol{x})$.
+
+We specify a Gaussian process distribution for $f(\boldsymbol{x})$ determined by the mean function 
+
+$$E[f(\boldsymbol{x})]=h(\boldsymbol{x})^T\boldsymbol{\beta}=\sum_{i=1}^p\beta_ih_i(\boldsymbol{x})$$
