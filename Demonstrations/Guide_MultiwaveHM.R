@@ -1,6 +1,7 @@
 source('BuildEmulator/BuildEmulator.R')
 source("BuildEmulator/DannyDevelopment.R")
 source("BuildEmulator/Rotation.R")
+source("HistoryMatching/HistoryMatching.R")
 source("HistoryMatching/HistoryMatchingFast.R")
 library(ncdf4)
 
@@ -78,6 +79,15 @@ StanEmsSCM_W2 <- InitialBasisEmulators(tDataSCM_W2[1:dim(wave_param_US)[1],], Ho
 FieldHM_W2 <- PredictAndHM(rotSCM_W2, ObsDatW2, StanEmsSCM_W2, tDataSCM_W2, Error = 0*Disc, Disc = Disc, weightinv = DiscInv,
                          PreviousWave = FieldHM)
 
+# Create density plot
+# We need to combine wave 1 and wave 2 information - fine as long as we've used the same design
+ImpData <- cbind(FieldHM$Design, FieldHM$impl) # wave 1 information
+colnames(ImpData)[dim(ImpData)[2]] <- 'impl'
+ImpDataW2 <- ImpData
+ImpDataW2$impl[which(FieldHM$inNROY == TRUE)] <- FieldHM_W2$impl # replaces W1 implausibility with W2, for runs that were not ruled out at wave 1
+source("HistoryMatching/impLayoutplot.R")
+ImpListW2 <- CreateImpList(whichVars = 1:5, VarNames = colnames(tDataSCM_W2)[1:5], ImpDataW2, nEms=1, Resolution=c(15,15), whichMax=1, Cutoff=FieldHM_W2$bound)
+imp.layoutm11(ImpListW2,VarNames = colnames(tData)[1:5],VariableDensity=TRUE,newPDF=FALSE,the.title=NULL,newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=NULL)
 
 # If we had multiple metrics at the previous wave, now it's easier to run at the same design
 # For metric 1, do as usual
