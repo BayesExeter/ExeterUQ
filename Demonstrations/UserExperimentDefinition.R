@@ -3,7 +3,7 @@
 experiment_name = "lmdzAWave"
 observation_name = "lmdzLES"
 # Define the Wave number of iterative refocussing
-WAVEN = 2
+WAVEN = 1
 # Define the value of a threshold
 cutoff = 3
 # Define a parameter that determines your implausibility measure
