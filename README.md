@@ -8,9 +8,10 @@
 
 **Directories**
 
-BuildEmulator cointains all the necessary R and Stan files to construct a GP emulator, perform diagnostics (Leave One Out)
+`BuildEmulator` cointains all the necessary R and Stan files to construct a GP emulator, perform diagnostics (Leave One Out)
 and predictions.
 
-HistoryMatching contains all the necassary R files to perform and visualize history matching and iterative refocussing.
+`HistoryMatching` contains all the necassary R files to perform and visualize history matching and iterative refocussing.
 
-Demonstartions contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
+`Demonstartions` contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
+
