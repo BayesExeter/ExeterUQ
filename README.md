@@ -15,3 +15,4 @@ and predictions.
 
 `Demonstartions` contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
 
+## Introduction to Gaussian Process Emulators
