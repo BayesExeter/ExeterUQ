@@ -70,8 +70,22 @@ tDataSCM_W2 <- GetEmulatableDataWeighted(Design = Wave2Design, EnsembleData = ro
 StanEmsSCM_W2 <- InitialBasisEmulators(tDataSCM_W2, HowManyEmulators=qROT_W2, TryFourier = TRUE)
 
 # Now history match using the wave 2 emulators, centred obs, and using the results from wave 1 history matching
-FieldHM2 <- PredictAndHM(rotSCM_W2, ObsDatW2, StanEmsSCM_W2, tDataSCM_W2, Error = 0*Disc, Disc = Disc, weightinv = DiscInv,
+FieldHM_W2 <- PredictAndHM(rotSCM_W2, ObsDatW2, StanEmsSCM_W2, tDataSCM_W2, Error = 0*Disc, Disc = Disc, weightinv = DiscInv,
                          PreviousWave = FieldHM)
+
+
+# If we had multiple metrics at the previous wave, now it's easier to run at the same design
+# For metric 1, do as usual
+#FieldHM
+# For metric k = 2,...m, do:
+#FieldHMk <- PredictAndHM(, ..., Design = FieldHM$Design) # evaluates at same design
+# Then if we want to rule out runs based on some multi metric, for example here let's assume that we want all of them to be below threshold
+# As we've evaluated all at same design, can find NROY runs as follows (for 3 metrics here):
+#inNROY_mm <- which(FieldHM$inNROY == TRUE & FieldHM2$inNROY == TRUE & FieldHM3$inNROY == TRUE)
+# For optimal use at wave 2, edit the $inNROY vector in each to indicate whether in the multi-metric NROY space
+#FieldHM$inNROY[inNROY_mm] <- FieldHM2$inNROY[inNROY_mm] <- FieldHM3$inNROY[inNROY_mm] <- TRUE
+#FieldHM$inNROY[-inNROY_mm] <- FieldHM2$inNROY[-inNROY_mm] <- FieldHM3$inNROY[-inNROY_mm] <- FALSE
+# so that when do wave 2, only evaluate at the inNROY_mm design runs
 
 
 
