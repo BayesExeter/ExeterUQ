@@ -44,6 +44,10 @@ Wave1DesignNROYinds <- which(Wave1DesignHM$inNROY == TRUE) # selecting those not
 # Add the wave 1 NROY runs to the columns (RAW DATA, NOT CENTRED)
 SCMsvdW2 <- MakeDataBasis(data = cbind(extracted_data_w2, extracted_data_w1[,Wave1DesignNROYinds]),
                           weightinv = DiscInv, W = Disc, RemoveMean = TRUE)
+# If need to scale:
+#SCMsvdW2 <- CentreAndBasis(MeanField = cbind(extracted_data_w2, extracted_data_w1[,Wave1DesignNROYinds]),
+#                          weightinv = DiscInv, scaling = 1)
+
 
 # The wave 2 ensemble has a different mean, hence we also need to re-centre the observations so
 # that our comparisons are consistent
@@ -67,7 +71,8 @@ Wave2Design <- wave_param_US
 Wave2Design <- rbind(Wave2Design, Wave1Design[Wave1DesignNROYinds,])
 # Get data for emulators
 tDataSCM_W2 <- GetEmulatableDataWeighted(Design = Wave2Design, EnsembleData = rotSCM_W2, HowManyBasisVectors = qROT_W2, weightinv = DiscInv)
-StanEmsSCM_W2 <- InitialBasisEmulators(tDataSCM_W2, HowManyEmulators=qROT_W2, TryFourier = TRUE)
+# Only use new runs to fit emulators (use rest for validation etc.)
+StanEmsSCM_W2 <- InitialBasisEmulators(tDataSCM_W2[1:dim(wave_param_US)[1],], HowManyEmulators=qROT_W2, TryFourier = TRUE)
 
 # Now history match using the wave 2 emulators, centred obs, and using the results from wave 1 history matching
 FieldHM_W2 <- PredictAndHM(rotSCM_W2, ObsDatW2, StanEmsSCM_W2, tDataSCM_W2, Error = 0*Disc, Disc = Disc, weightinv = DiscInv,
