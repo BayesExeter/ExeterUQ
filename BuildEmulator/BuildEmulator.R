@@ -303,6 +303,7 @@ EMULATOR.gpstan <- function(x, Emulator, GP=TRUE, FastVersion=FALSE,  CompiledMo
       if(dim(Emulator$H)[2]> 1) tExpectation <- as.vector(Hpred%*%Emulator$ParameterSamples$beta[Emulator$FastParts$tMAP,] + crossprod(txtA, Emulator$FastParts$Ldiff))
       else tExpectation <- as.vector(Hpred%*%Emulator$ParameterSamples$beta[Emulator$FastParts$tMAP] + crossprod(txtA, Emulator$FastParts$Ldiff))
       tVariance <- as.vector(diag(diag(Emulator$ParameterSamples$sigma[Emulator$FastParts$tMAP]^2,nrow=dim(Xpred)[1],ncol=dim(Xpred)[1]) - crossprod(txtA)))
+      tVariance[which(tVariance < 0)] <- 0
       StandardDev <- sqrt(tVariance)
     }
     else{
