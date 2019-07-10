@@ -18,3 +18,8 @@ compute implausibility function.
 `Disc`: is a vector of variances of discrepancy terms.
 
 `metric`: corresponds to a vector of names of metrics of interest.
+
+
+To construct a GP emulator and in order to perform a Wave 1 History Matching type in Terminal
+
+`Rscript Demonstrations/EmulationMultiWave.R`
