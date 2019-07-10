@@ -1,0 +1,92 @@
+---
+title: "Emulating LMDZ SCM output"
+output: html_document
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(fig.path='figure/lmdz/', 
+                      fig.height=6, fig.width=10,
+                      cache.path='_knitr_cache/emulate-lmdz/')
+set.seed(14112017)
+```
+
+In this example we use primarily R and Stan files from **BuildEmulator** directory to construct and validate a GP emulator. 
+
+First we start with loading the necessary packages, functions and compilation of Stan files that are necessary to construct a GP emulator.
+```{r results='hide', message=FALSE, warning=FALSE}
+setwd('..')
+source('BuildEmulator/BuildEmulator.R')
+```
+
+We proceed to loading the data file `lmdzAWave1.RData`. The emulator inputs are saved in columns 1 to 6 (on $[-1, 1]$ scale) of the object `tData` together with the simulator response saved as a last column of a data frame.
+
+```{r}
+load('../Demonstrations/lmdzAWave1.RData')
+head(tData)
+```
+
+We specify a number and a vector of metrics of interest (computer model output), a number and vector of candidates (potential emulator inputs). Notice that we have an extra `Noise` variable, which is considered as a potential predictor and plays an important part in deriving the form of a regression function $h(\boldsymbol{x})$.
+
+```{r}
+metric = c('SCMdata')
+nmetric = length(metric)
+cands = names(tData)[-which(names(tData) == metric)]
+param = cands[-which(cands == "Noise")]
+nparam = length(param)
+```
+
+We visualize the model response behaviour against model inputs standardized on $[-1, 1]$ scale via scatter plots:
+
+```{r plot-lmdz-scatter}
+if(nparam*nmetric<2){ par(mfrow = c(1, 1), mar=c(4, 4, 1, 1))
+} else if(nparam*nmetric <= 4){ par(mfrow = c(2, 2), mar=c(4, 4, 1, 1))
+} else if(nparam*nmetric <= 9){ par(mfrow = c(3, 3), mar=c(4, 4, 1, 1))
+} else if(nparam*nmetric <= 16){ par(mfrow = c(4, 4), mar=c(4, 4, 1, 1))
+} else if(nparam*nmetric <= 25){ par(mfrow = c(5,5), mar=c(4, 4, 1, 1)) }
+for ( iparam in 1:nparam ) {
+  for (j in 1:nmetric) {
+    plot(tData[,iparam],tData[,nparam+j+1],col=2,xlab=cands[iparam],ylab=metric[j],
+         ylim=range(tData[,nparam+j+1]))
+  }
+}
+```
+
+## Build the emulator
+
+We build the emulator for the output variable (metric) `SCMdata`. In this particular example we have just one metric of interest `nmetric=1`, however it is possible to extend `InitialBasisEmulators` to $q>1$ uncorrelated metrics. `InitialBasisEmulators` constructs a GP emulator for one at a time metric of interest in two major steps:
+
+1. Derive the form of a regression function $h(\boldsymbol{x})$ by using a stepwise regression procedure. We use function `EMULATE.lm`.
+2. Construct a full GP emulator with a function `EMULATE.gpstan`.
+
+```{r results='hide', message=FALSE, warning=FALSE}
+listnew <-lapply(1:nmetric,function(k) names(tData[1:nparam]))
+myem.lm <-InitialBasisEmulators(tData=tData,HowManyEmulators=nmetric,additionalVariables = listnew)
+```
+
+The output of a function is a list where each member of a list corresponds to an object `StanEmulator` obtained for each metric of interest.
+
+```{r}
+names(myem.lm[[1]])
+```
+
+For example, we could consider a regression function $h(\boldsymbol{x})$ used in the definition of the mean function for a GP emulator
+
+```{r}
+summary(myem.lm[[1]]$linModel)
+```
+
+## Diagnostics for a GP emulator
+
+Since we are operating with Stan, it is crucial to check the convergence of posterior samples obtained for GP emulator hyperparameters.
+```{r plot-lmdz-traceplot}
+traceplot(myem.lm[[1]]$StanModel)
+```
+
+We also validate the performance of GP emulator by considering the Leave One Out (LOO) diagnostics plots. The black dots and error bars shows the predictions $\pm2\times$ standard deviation prediction intervals from the leave one out emulators, whilst the green/red dots are the true model output coloured by whether or not the true lies within the error bar.
+```{r plot-lmdz-LOO}
+for (i in 1:nmetric) {
+  tLOOs1 <- LOO.plot(StanEmulator = myem.lm[[i]] , ParamNames=names(tData)[1:nparam])
+}
+```
+
+
