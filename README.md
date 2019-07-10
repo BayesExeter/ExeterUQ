@@ -15,4 +15,5 @@ and predictions.
 
 `Demonstrations` contains all the R files and RData files to perform a simple demonstrations of the functionality of **ExeterUQ** tools.
 
+`Examples` contains examples on emulations and history matching in order to understand the main functionalities of **ExeterUQ** tools.
 
