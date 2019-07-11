@@ -104,14 +104,14 @@ imp.layoutm11(ImpListW2,VarNames = colnames(tDataSCM)[1:5],VariableDensity=TRUE,
 
 # Instead, create a plot from multiple different fields, with possibly different dimensions
 # If we've used the same design for each metric, and label each as FieldHM_mk:
-ImpData <- cbind(FieldHM_m1$Design, (FieldHM_m1$impl / FieldHM_m1$bound)*3, 
-                                    (FieldHM_m2$impl / FieldHM_m2$bound)*3,
-                                    (FieldHM_m3$impl / FieldHM_m3$bound)*3)
+ImpData_mm <- cbind(FieldHM_m1$Design, (FieldHM_m1$impl / FieldHM_m1$bound)*3, 
+                                       (FieldHM_m2$impl / FieldHM_m2$bound)*3,
+                                       (FieldHM_m3$impl / FieldHM_m3$bound)*3)
 # So now all implausibilities are scaled to have 3 as the cutoff, so can compare
 # Set cutoff = 3 as we've scaled so that this is always the bound
 # Set whichMax = 1 if we want to use the maximum implausibility across the different fields
 # Set nEms = 3 as we have 3 different fields
-ImpList_mm <- CreateImpList(whichVars = 1:5, VarNames = colnames(tDataSCM)[1:5], ImpData, nEms=3, Resolution=c(15,15), whichMax=1, Cutoff=3)
+ImpList_mm <- CreateImpList(whichVars = 1:5, VarNames = colnames(tDataSCM)[1:5], ImpData_mm, nEms=3, Resolution=c(15,15), whichMax=1, Cutoff=3)
 imp.layoutm11(ImpList_mm, VarNames = colnames(tDataSCM)[1:5], VariableDensity=TRUE,newPDF=FALSE,the.title=NULL,newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=NULL)
 
 
