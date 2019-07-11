@@ -174,7 +174,7 @@ PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, wei
 #' @param Design if not NULL, passes a design at which to evaluate emulators and implausibility
 #' @param PreviousWave if not NULL, provides the output of a previous PredictAndHM object, and evaluates the current NROY points from the previous design
 #'
-#' @return \impl{Design}{Space-filling design of ns points at which the emulators were evaluated}
+#' @return \item{Design}{Space-filling design of ns points at which the emulators were evaluated}
 #' \item{Expectation}{A list of emulator expectations for each field}
 #' \item{Variance}{A list of emulator variances}
 #' \item{impl}{A matrix of implausibilities, with rows corresponding to Design, column corresponding to each field}
