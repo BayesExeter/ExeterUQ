@@ -87,7 +87,7 @@ ImpDataW2 <- ImpData
 ImpDataW2$impl[which(FieldHM$inNROY == TRUE)] <- FieldHM_W2$impl # replaces W1 implausibility with W2, for runs that were not ruled out at wave 1
 source("HistoryMatching/impLayoutplot.R")
 ImpListW2 <- CreateImpList(whichVars = 1:5, VarNames = colnames(tDataSCM_W2)[1:5], ImpDataW2, nEms=1, Resolution=c(15,15), whichMax=1, Cutoff=FieldHM_W2$bound)
-imp.layoutm11(ImpListW2,VarNames = colnames(tData)[1:5],VariableDensity=TRUE,newPDF=FALSE,the.title=NULL,newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=NULL)
+imp.layoutm11(ImpListW2,VarNames = colnames(tDataSCM)[1:5],VariableDensity=TRUE,newPDF=FALSE,the.title=NULL,newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=NULL)
 
 # If we had multiple metrics at the previous wave, now it's easier to run at the same design
 # For metric 1, do as usual
@@ -101,6 +101,18 @@ imp.layoutm11(ImpListW2,VarNames = colnames(tData)[1:5],VariableDensity=TRUE,new
 #FieldHM$inNROY[inNROY_mm] <- FieldHM2$inNROY[inNROY_mm] <- FieldHM3$inNROY[inNROY_mm] <- TRUE
 #FieldHM$inNROY[-inNROY_mm] <- FieldHM2$inNROY[-inNROY_mm] <- FieldHM3$inNROY[-inNROY_mm] <- FALSE
 # so that when do wave 2, only evaluate at the inNROY_mm design runs
+
+# Instead, create a plot from multiple different fields, with possibly different dimensions
+# If we've used the same design for each metric, and label each as FieldHM_mk:
+ImpData <- cbind(FieldHM_m1$Design, (FieldHM_m1$impl / FieldHM_m1$bound)*3, 
+                                    (FieldHM_m2$impl / FieldHM_m2$bound)*3,
+                                    (FieldHM_m3$impl / FieldHM_m3$bound)*3)
+# So now all implausibilities are scaled to have 3 as the cutoff, so can compare
+# Set cutoff = 3 as we've scaled so that this is always the bound
+# Set whichMax = 1 if we want to use the maximum implausibility across the different fields
+# Set nEms = 3 as we have 3 different fields
+ImpList_mm <- CreateImpList(whichVars = 1:5, VarNames = colnames(tDataSCM)[1:5], ImpData, nEms=3, Resolution=c(15,15), whichMax=1, Cutoff=3)
+imp.layoutm11(ImpList_mm, VarNames = colnames(tDataSCM)[1:5], VariableDensity=TRUE,newPDF=FALSE,the.title=NULL,newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=NULL)
 
 
 
