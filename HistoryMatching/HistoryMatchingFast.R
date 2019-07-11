@@ -157,3 +157,73 @@ PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, wei
   return(list(Design = Design, Expectation = Expectation, Variance = Variance, impl = FieldHM$impl, bound = FieldHM$bound, nroy = FieldHM$nroy, inNROY = FieldHM$inNROY))
 }
 
+
+
+#' Prediction and history matching for multiple fields
+#'
+#' Given a basis, emulator, observations etc. for multiple fields, predicts and history matches for each
+#'
+#' @param DataBasis list of DataBasis objects
+#' @param Obs list of centred observation vectors
+#' @param Ems list of emulator lists
+#' @param tData list of tData objects
+#' @param ns size of design to sample
+#' @param Error list of observation error variance matrices
+#' @param Disc list of discrepancy variance matrices
+#' @param weightinv if not NULL, a list of (var_err + var_disc)^{-1} for each field
+#' @param Design if not NULL, passes a design at which to evaluate emulators and implausibility
+#' @param PreviousWave if not NULL, provides the output of a previous PredictAndHM object, and evaluates the current NROY points from the previous design
+#'
+#' @return \impl{Design}{Space-filling design of ns points at which the emulators were evaluated}
+#' \item{Expectation}{A list of emulator expectations for each field}
+#' \item{Variance}{A list of emulator variances}
+#' \item{impl}{A matrix of implausibilities, with rows corresponding to Design, column corresponding to each field}
+#' \item{bound}{Vector with the chi-squared bound for each field}
+#' \item{nroy}{Percentage of parameter settings that are not ruled out, using bound, for each field individually}
+#' \item{inNROY}{Matrix corresponding to impl and bound, indicating whether each combination of parameter setting and field is ruled out}
+#'
+#' @export
+PredictAndHM_multi <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, weightinv = NULL, BasisUncertainty = FALSE, input_range = c(-1,1),
+                               Design = NULL, PreviousWave = NULL){
+  m <- length(DataBasis)
+  if (!(length(Obs) == m)){
+    stop('Different number of observations and DataBasis objects provided - check all lists have same length')
+  }
+  if (!(length(Ems) == m)){
+    stop('Different number of emulators and DataBasis objects provided - check all lists have same length')
+  }
+  if (!(length(tData) == m)){
+    stop('Different number of tData objects and DataBasis objects provided - check all lists have same length')
+  }
+  if (!(length(Error) == m)){
+    stop('Different number of Error matrices and DataBasis objects provided - check all lists have same length')
+  }
+  if (!(length(Disc) == m)){
+    stop('Different number of Discrepancy matrices and DataBasis objects provided - check all lists have same length')
+  }
+  
+  if (is.null(PreviousWave)){
+    output <- PredictAndHM(DataBasis[[1]], Obs[[1]], Ems[[1]], tData[[1]], ns, Error[[1]], Disc[[1]], weightinv[[1]], BasisUncertainty, input_range)
+    output1 <- mclapply(2:m, function(e) PredictAndHM(DataBasis[[e]], Obs[[e]], Ems[[e]], tData[[e]], ns, Error[[e]], Disc[[e]], weightinv[[e]], BasisUncertainty, input_range, Design = output$Design, PreviousWave = PreviousWave))
+    output <- c(list(output), output1)
+  }
+  
+  if (!is.null(PreviousWave)){
+    output <- mclapply(1:m, function(e) PredictAndHM(DataBasis[[e]], Obs[[e]], Ems[[e]], tData[[e]], ns, Error[[e]], Disc[[e]], weightinv[[e]], BasisUncertainty, input_range, PreviousWave = PreviousWave))
+  }
+  
+  # Re-format the output
+  Design <- output[[1]]$Design
+  Expectation <- lapply(1:m, function (e) output[[e]]$Expectation)
+  Variance <- lapply(1:m, function (e) output[[e]]$Variance)
+  impl <- matrix(unlist(lapply(1:m, function (e) output[[e]]$impl)), nrow = dim(Design)[1], ncol = m)
+  bound <- unlist(lapply(1:m, function (e) output[[e]]$bound))
+  nroy <- unlist(lapply(1:m, function (e) output[[e]]$nroy))
+  inNROY <- matrix(unlist(lapply(1:m, function (e) output[[e]]$inNROY)), nrow = dim(Design)[1], ncol = m)
+  
+  return(list(Design = Design, Expectation = Expectation, Variance = Variance, impl = impl, bound = bound, nroy = nroy, inNROY = inNROY))
+}
+
+
+
+
