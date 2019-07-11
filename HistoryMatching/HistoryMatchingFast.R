@@ -183,7 +183,7 @@ PredictAndHM <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, wei
 #' \item{inNROY}{Matrix corresponding to impl and bound, indicating whether each combination of parameter setting and field is ruled out}
 #'
 #' @export
-PredictAndHM_multi <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, weightinv = NULL, BasisUncertainty = FALSE, input_range = c(-1,1),
+PredictAndHM_multi <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Disc, weightinv = NULL, BasisUncertainty = FALSE,
                                Design = NULL, PreviousWave = NULL){
   m <- length(DataBasis)
   if (!(length(Obs) == m)){
@@ -203,13 +203,13 @@ PredictAndHM_multi <- function(DataBasis, Obs, Ems, tData, ns = 1000, Error, Dis
   }
   
   if (is.null(PreviousWave)){
-    output <- PredictAndHM(DataBasis[[1]], Obs[[1]], Ems[[1]], tData[[1]], ns, Error[[1]], Disc[[1]], weightinv[[1]], BasisUncertainty, input_range)
-    output1 <- mclapply(2:m, function(e) PredictAndHM(DataBasis[[e]], Obs[[e]], Ems[[e]], tData[[e]], ns, Error[[e]], Disc[[e]], weightinv[[e]], BasisUncertainty, input_range, Design = output$Design, PreviousWave = PreviousWave))
+    output <- PredictAndHM(DataBasis[[1]], Obs[[1]], Ems[[1]], tData[[1]], ns, Error[[1]], Disc[[1]], weightinv[[1]], BasisUncertainty)
+    output1 <- mclapply(2:m, function(e) PredictAndHM(DataBasis[[e]], Obs[[e]], Ems[[e]], tData[[e]], ns, Error[[e]], Disc[[e]], weightinv[[e]], BasisUncertainty, Design = output$Design, PreviousWave = PreviousWave))
     output <- c(list(output), output1)
   }
   
   if (!is.null(PreviousWave)){
-    output <- mclapply(1:m, function(e) PredictAndHM(DataBasis[[e]], Obs[[e]], Ems[[e]], tData[[e]], ns, Error[[e]], Disc[[e]], weightinv[[e]], BasisUncertainty, input_range, PreviousWave = PreviousWave))
+    output <- mclapply(1:m, function(e) PredictAndHM(DataBasis[[e]], Obs[[e]], Ems[[e]], tData[[e]], ns, Error[[e]], Disc[[e]], weightinv[[e]], BasisUncertainty, PreviousWave = PreviousWave))
   }
   
   # Re-format the output
