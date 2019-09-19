@@ -426,6 +426,12 @@ RotateBasis <- function(DataBasis, obs, kmax = 5, weightinv = NULL, v = c(rep(0.
   }
   l <- dim(basis)[1]
   n <- dim(data)[2]
+  
+  if (l <= n){
+    n <- ExplainT(DataBasis, vtot = 1, weightinv)
+    basis <- basis[,1:n]
+  }
+
   minRw <- ReconError(obs, basis, weightinv)
   if (is.null(prior)){
     prior <- c(1:dim(basis)[2])
