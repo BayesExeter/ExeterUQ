@@ -274,10 +274,18 @@ CalcScores <- function(data, basis, weightinv = NULL){
   }
   else {
     V <- t(basis) %*% weightinv %*% basis
-    Q <- chol(V)
-    y <- backsolve(Q, diag(p), transpose = TRUE)
-    x <- backsolve(Q, t(basis) %*% weightinv %*% data, transpose = TRUE)
-    scores <- crossprod(y, x)
+    V <- (V+t(V))/2
+    Q <- try(chol(V))
+    if(!inherits(Q, "try-error")){
+      y <- backsolve(Q, diag(p), transpose = TRUE)
+      x <- backsolve(Q, t(basis) %*% weightinv %*% data, transpose = TRUE)
+      scores <- crossprod(y, x)
+    }
+    else{
+      DataAdj <- t(basis) %*% weightinv %*% data
+      Vinv <- ginv(V)
+      scores <- diag(p) %*% Vinv %*% DataAdj
+    }
   }
   return(t(scores))
 }
@@ -426,12 +434,6 @@ RotateBasis <- function(DataBasis, obs, kmax = 5, weightinv = NULL, v = c(rep(0.
   }
   l <- dim(basis)[1]
   n <- dim(data)[2]
-  
-  if (l <= n){
-    n <- ExplainT(DataBasis, vtot = 1, weightinv)
-    basis <- basis[,1:n]
-  }
-
   minRw <- ReconError(obs, basis, weightinv)
   if (is.null(prior)){
     prior <- c(1:dim(basis)[2])
