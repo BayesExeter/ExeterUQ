@@ -1,7 +1,7 @@
 twd <- getwd()
 packages <- c('GenSA', 'far', 'fields', 'lhs', 'maps', 'mco', 'mvtnorm', 
               'ncdf4', 'parallel', 'rstan', 'shape', 'tensor', 'withr', 
-              'loo', 'bayesplot')
+              'loo', 'bayesplot','MASS')
 sapply(packages, require, character.only = TRUE, quietly = TRUE)
 
 source("BuildEmulator/AutoLMcode.R")
@@ -164,6 +164,7 @@ EMULATE.gpstan <- function(meanResponse, CompiledModelFit = model_fit, sigmaPrio
 
     #Design <- as.matrix(tData[,which((names(tData)%in%meanResponse$Names) | (names(tData)%in%meanResponse$Factors) | (names(tData)%in%additionalVariables) | (names(tData) %in% names(meanResponse$Fouriers)))])
   Design <- as.matrix(tData[,which((names(tData)%in%meanResponse$Names) |  (names(tData)%in%additionalVariables) | (names(tData) %in% names(meanResponse$Fouriers)))])
+  colnames(Design) <- names(tData)[which((names(tData)%in%meanResponse$Names) |  (names(tData)%in%additionalVariables) | (names(tData) %in% names(meanResponse$Fouriers)))]
   #Perhaps can take factors out of Design? H still includes them, only effects corr lengths in Stan
   #Slightly careful handling in EMULATOR.gpstan would be required
   tF <- tData[,which(names(tData)==meanResponse$ResponseString)]
@@ -223,6 +224,7 @@ EMULATE.gpstan <- function(meanResponse, CompiledModelFit = model_fit, sigmaPrio
   } else {
     # consider the same prior specification for delta_par (correlation length parameter)
     Design <- as.matrix(tData[,which((names(tData)%in%meanResponse$Names) |  (names(tData)%in%additionalVariables) | (names(tData) %in% names(meanResponse$Fouriers)))])
+    colnames(Design) <- names(tData)[which((names(tData)%in%meanResponse$Names) |  (names(tData)%in%additionalVariables) | (names(tData) %in% names(meanResponse$Fouriers)))]
     p <- dim(Design)[2]
     p.active = p.inactive = 1
     init.list <- list(list(beta=array(meanResponse$linModel$coefficients, dim = Np), sigma=prior.params$SigSq, nugget = prior.params$nugget, delta_par=array(rep(0.7, p), dim=p)),
@@ -541,8 +543,8 @@ LOO.plot <- function(StanEmulator, ParamNames) {
   }
   #par(mfrow = c(1, 3), mar=c(4, 4, 1, 1))
   for(i in 1:p) {
-    ValidPlot(fit.stan, StanEmulator$Design, StanEmulator$tF, interval = range(fit.stan), axis = i, 
-              heading = "", xrange = c(-1, 1), ParamNames = ParamNames) 
+    try(ValidPlot(fit.stan, StanEmulator$Design, StanEmulator$tF, interval = range(fit.stan), axis = i, 
+              heading = "", xrange = c(-1, 1), ParamNames = ParamNames),silent=TRUE) 
   }
   return(fit.stan)
 }
