@@ -1,6 +1,7 @@
 ---
 title: "Emulating LMDZ SCM output"
 output: html_document
+bibliography: bibliography.bib
 ---
 
 ```{r, echo = FALSE}
