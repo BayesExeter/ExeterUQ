@@ -423,7 +423,8 @@ InitialBasisEmulators <- function(tData, HowManyEmulators, additionalVariables=N
                                                                sigmaPrior = sigmaPrior, nuggetPrior = nuggetPrior, activePrior = activePrior, 
                                                                activeVariables = activeVariables, prior.params = prior.params, ...), silent = TRUE))
 }
-ValidPlot <- function(fit, X, y, interval = c(), axis = 1, heading = " ", xrange = c(-1, 1), ParamNames) {
+ValidPlot <- function(fit, X, y, interval = c(), axis = 1, heading = " ", 
+                      xrange = c(-1, 1), ParamNames, OriginalRanges = FALSE, RangeFile=NULL) {
 #' Plots the emulator predictions together with error bars and true values.
 #'
 #' @param fit a data frame of emulator predictions. First column corresponds
@@ -437,6 +438,12 @@ ValidPlot <- function(fit, X, y, interval = c(), axis = 1, heading = " ", xrange
 #' @param heading a title of the plot
 #' @param xrange a vector to define the x limit of the plot
 #' @param ParamNames a vector of names of the parameters in the data frame
+#' @param OriginalRanges. If TRUE, LOOs will be plotted on the original parameter ranges
+#' Those ranges will be read from a file containing the parameter ranges and whether the 
+#' parameters are logged or not. Defaults to FALSE, where parameters will be plotted on [-1,1]
+#' @param RangeFile A .R file that will be sourced in order to determine the ranges of the
+#' parameters to be plotted and whether they are on a log scale or not. If NULL when OrignialRanges
+#' is called, a warning is thrown and the plot is given on [-1,1]
 #' 
 #' @return A plot of emulator predictions together with the error bars
 #' (plus and minus 2*standard deviations) and true values.
@@ -451,6 +458,15 @@ ValidPlot <- function(fit, X, y, interval = c(), axis = 1, heading = " ", xrange
   }
   outside <- c(1:length(y))[-inside]
   chosen_column <- which(colnames(X) == ParamNames[axis])
+  if(OriginalRanges){
+    if(is.null(RangeFile))
+      stop("Cannot plot on original ranges as no RangeFile Specified")
+    else if(TRY TO OPEN RANGE FILE AND FAIL){
+      stop("Invalid RangeFile given")
+    }
+    else
+      FIX XRANGES WHEN KNOW FILE FORMAT
+  }
   if(is.null(interval)) {
     plot(X[ , chosen_column], fit[, 1], pch=20, ylab='Y', 
          xlab=ParamNames[axis],
@@ -495,11 +511,20 @@ virtual.LOO <- function(Design, y, cls, sigma, H, beta, nugget) {
   return(predict_y)
 }
 
-LOO.plot <- function(StanEmulator, ParamNames) {
+LOO.plot <- function(StanEmulator, ParamNames, 
+                     OriginalRanges = FALSE, RangeFile=NULL, Obs=NULL, ObsErr=NULL) {
   #' Function to generate Leave-One-Out predictions.
   #' 
   #' @param StanEmulator a GP emulator from EMULATE.gpstan function.
   #' @param ParamNames a vector of names for parameters.
+  #' @param OriginalRanges. If TRUE, LOOs will be plotted on the original parameter ranges
+  #' Those ranges will be read from a file containing the parameter ranges and whether the 
+  #' parameters are logged or not. Defaults to FALSE, where parameters will be plotted on [-1,1]
+  #' @param RangeFile A .R file that will be sourced in order to determine the ranges of the
+  #' parameters to be plotted and whether they are on a log scale or not. If NULL when OrignialRanges
+  #' is called, a warning is thrown and the plot is given on [-1,1]
+  #' @param Obs. The scalar value of the observations to be plotted as a dasked line if not NULL
+  #' @param ObsErr. Observation error (scalar). If this is NULL when obs is not NULL, a warning is thrown.
   #' 
   #' @return a data frame with three columns, with first column corresponding to posterior mean, 
   #' and second and third columns corresponding to the minus and plus two standard deviations.
@@ -542,10 +567,20 @@ LOO.plot <- function(StanEmulator, ParamNames) {
     par(mfrow = c(4, 4), mar=c(4, 4, 1, 1))
   }
   #par(mfrow = c(1, 3), mar=c(4, 4, 1, 1))
-  for(i in 1:p) {
-    try(ValidPlot(fit.stan, StanEmulator$Design, StanEmulator$tF, interval = range(fit.stan), axis = i, 
-              heading = "", xrange = c(-1, 1), ParamNames = ParamNames),silent=TRUE) 
-  }
+    for(i in 1:p) {
+      try(aplot <- ValidPlot(fit.stan, StanEmulator$Design, StanEmulator$tF, interval = range(fit.stan), 
+                             axis = i, heading = "", ParamNames = ParamNames, 
+                             OriginalRanges = OriginalRanges, RangeFile=RangeFile), silent=TRUE)
+      if(!inherits(aplot, "try-error") & !is.null(Obs)){
+        abline(h=Obs, lty=2, col=4)
+        if(is.null(ObsErr))
+          warning("The observations do not have 0 error. Please add ObsErr else the plot will be misleading")
+        else{
+          abline(h=obs+3*ObsErr, col=4, lty=2)
+          abline(h=obs-3*ObsErr, col=4, lty=2)
+        }
+      }
+    }
   return(fit.stan)
 }
 
