@@ -1,7 +1,7 @@
 twd <- getwd()
 packages <- c('GenSA', 'far', 'fields', 'lhs', 'maps', 'mco', 'mvtnorm', 
               'ncdf4', 'parallel', 'rstan', 'shape', 'tensor', 'withr', 'tgp', 'CGP',
-              'loo', 'bayesplot')
+              'loo', 'bayesplot', 'gridExtra')
 sapply(packages, require, character.only = TRUE)
 
 source("BuildEmulator/AutoLMcode.R")
@@ -15,7 +15,6 @@ tprednewfile_loc_nst = paste(twd, "/BuildEmulator/PredictGenNGP.stan", sep = "")
 
 # Stan files to estimate mixture components
 tfile_mix = paste(twd, "/BuildEmulator/MixtureModFit.stan", sep = "")
-#tpredfile_mix = paste(twd, "/BuildEmulator/MixtureModPredict.stan", sep = "")
 
 ccode_fit_nst <- stanc(file = tfile_loc_nst)
 model_fit_nst <- stan_model(stanc_ret = ccode_fit_nst)
@@ -27,42 +26,6 @@ model_predict_nst <- stan_model(stanc_ret = ccode_predict_nst) # predictions cou
 ccode_fit_mix <- stanc(file = tfile_mix)
 model_fit_mix <- stan_model(stanc_ret = ccode_fit_mix)
 
-
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-  
-  numPlots = length(plots)
-  
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  
-  if (numPlots==1) {
-    print(plots[[1]])
-    
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
 gpstan.default.params <- list(SigSq = 0.15, SigSqV = 0.25, AlphaAct = 4, BetaAct = 4,
                               AlphaInact = 42, BetaInact = 9, AlphaNugget = 3,
                               BetaNugget = 0.1, AlphaRegress = 0, BetaRegress = 10, 
@@ -175,38 +138,35 @@ NewCov <- function(x, Design, cls){
   return(exp(-(D^2)))
 }
 
-MIXTURE.design <- function(y.std, X, L=2, CompiledModel = model_fit_mix, FastVersion = TRUE) {
+MIXTURE.design <- function(formula, tData.mixture, L=2, 
+                           CompiledModel = model_fit_mix) {
 #' Generates a matrix of mixture components for X
 #' 
-#'  @param y.std standardized errors from stationary GP emulator
-#'  @param X a matrix of inputs
+#'  @param formula an object of class `formula`: a symbolic description of 
+#'  the model to be fitted.
+#'  @param tData.mixture a data frame, containing the variables in the model
+#'  and standard errors from stationary fit.
 #'  @param L an integer, a number of mixtures 
 #'  @param CompiledModel an instance of S4 class stanmodel used for fitting finite mixture model 
-#'  @param FastVersion TRUE (default) value results at fixing parameter values
-#'  at the posterior mean; FALSE saves the posterior samples for parameters
 #'  
 #'  @return A list contatining the following components (need to write up this later)
 #'  
-  H <- X
-  #H <- cbind(rep(1, dim(X)[1]), X)
-  BayesMixture <- sampling(CompiledModel, data = list(N = length(y.std), D = dim(H)[2], 
-                                                    K = L, y = y.std, x = H), 
-                       iter = 10000, warmup=5000, chains = 2, cores = 4)
+  
+  m <- model.frame(formula, tData.mixture)
+  H <- model.matrix(formula, tData.mixture)
+  std.err <- tData.mixture$std.err
+  BayesMixture <- sampling(CompiledModel, data = list(N = length(std.err), D = dim(H)[2], 
+                                                      K = L, y = std.err, x = H), 
+                           iter = 10000, warmup=5000, chains = 2, cores = 4)
   MixtureSamples <- extract(BayesMixture, pars = c('beta', 'sigma'))
-  if(FastVersion){
-    lps <- extract_log_lik(BayesMixture)
-    tMAP <- which.max(rowSums(lps))
-    betaMix <- MixtureSamples$beta[tMAP, , ]
-    sigmaMix <- MixtureSamples$sigma[tMAP, ]
-    MixtureFastParts <- list(tMAP=tMAP, betaMix = betaMix, sigmaMix = sigmaMix)
-  }
   # extract only the posterior mean for mixture matrix for design set
   MixtureMat <- summary(BayesMixture, pars = 'mixture_vec')$summary[, 1]
   MixtureMat <- t(matrix(MixtureMat, nrow = L))
   
-  mixture.list <- list(y.std = y.std, X = X, L = L, FastVersion = FastVersion, 
-                       MixtureSamples=MixtureSamples, MixtureFastParts=MixtureFastParts,
-                       MixtureMat = MixtureMat, StanObject = BayesMixture)
+  mixture.list <- list(std.err = std.err, X = H, L = L, 
+                       MixtureSamples=MixtureSamples,
+                       MixtureMat = MixtureMat, StanObject = BayesMixture, 
+                       formula = formula)
   return(mixture.list)
 }
 SoftMax <- function(beta, x) {
@@ -214,22 +174,43 @@ SoftMax <- function(beta, x) {
   return(t(m%*%diag(1/colSums(m))))
 }
 
-#MIXTURE.predict <- function(x, mixtureComp, CompiledModel = model_predict_mix, 
-#                            FastVersion = FALSE) {
-MIXTURE.predict <- function(x, mixtureComp, FastVersion = FALSE, batches = 500) {  
-#' Generates a matrix of mixture components for x
+MIXTURE.predict <- function(x, mixtureComp, FastVersion = FALSE, batches = 500) { 
+#' Generates a matrix of mixture components for unseen x
 #' 
 #' @param x a matrix of inputs
 #' @param mixtureComp a mixture model from MIXTURE.design function
 #' @param CompiledModel an instance of S4 class stanmodel used for fitting a GP model
+#' @param FastVersion if TRUE compute mixture components in parallel
+#' @param batches an integer defining a number inside batches.
 #' 
 #' @return A matrix of mixture components for the validation matrix x
-  #H <- cbind(rep(1, dim(x)[1]), x)
-  H <- x
+  tt = terms(mixtureComp$formula)
+  Terms = delete.response(tt)
+  mm = model.frame(Terms, x)
+  H = model.matrix(Terms, mm)
   if(FastVersion) {
-    predict.mixture.mean <- as.matrix(H)%*%t(mixtureComp$MixtureFastParts$betaMix)
-    predict.mixture.mean <- exp(predict.mixture.mean)
-    predict.mixture.mean <- predict.mixture.mean/rowSums(predict.mixture.mean)
+    beta = mixtureComp$MixtureSamples$beta[5001:10000, , ]
+    Nruns = dim(H)[1]
+    Nbatch = ceiling(Nruns/batches)
+    batchSeq = lapply(1:(Nbatch-1), function(k) seq(from=1+(k - 1)*batches,by=1,length.out = batches))
+    batchSeq[[Nbatch]] = (batchSeq[[Nbatch-1]][batches]+1):Nruns
+    # maybe I have to do DoClusters
+    cl = makeCluster(2)
+    registerDoParallel(cl)
+    predict.mixture.mean <- foreach(i=1:length(batchSeq), .combine = rbind) %dopar% {
+      N = dim(beta)[1]
+      if(dim(H)[2] == 1) {
+        H_batch = matrix(H[batchSeq[[i]], ], ncol = 1)
+        tSamples = lapply(1:dim(beta)[1], function(e) exp(as.matrix(H_batch)%*%t(beta[e, ])))
+      } else {
+        H_batch = H[batchSeq[[i]], ]
+        tSamples = lapply(1:dim(beta)[1], function(e) exp(as.matrix(H_batch)%*%t(beta[e, , ])))
+      }
+      tSamples = lapply(1:dim(beta)[1], function(e) tSamples[[e]]/rowSums(tSamples[[e]]))
+      predict.mixture.mean.samples = Reduce("+", tSamples)
+      (1/N)*predict.mixture.mean.samples
+    }
+    stopCluster(cl = cl)
   }
   else {
     Nsamples <- dim(mixtureComp$MixtureSamples$sigma)[1]
@@ -696,7 +677,42 @@ S.Int.score <- function(pred, y.true, alpha = 0.05) {
   result <- sum(score)/N
   return(result)
 }
+VAIC <- function(mixtureComp, nuggetParam = FALSE) {
+  #' Function to calculate the modified AIC criterion: the first part of
+  #' the modified AIC criterion corresponds to the deviance (twice the negative
+  #' log likelihood), the second term is equal to twice the number of parameters 
+  #' in the mixture model. We also add the penalty that corresponds to the number
+  #' of region-specific parameters of full nonstationary GP model.
+  #' @param mixtureComp 
+  #' @nuggetParam logical. If FALSE (the default) the nugget parameter is fixed at a
+  #' small arbitrary value for numerical stability of computations.
 
+  #' @return a real number. Please note that we choose L with the lowest AIC score.
+  if(dim(mixtureComp$X)[2] == 1) {
+    post.mean.beta = t(matrix(sapply(1:mixtureComp$L, function(x) mean(mixtureComp$MixtureSamples$beta[, x, ])), ncol = mixtureComp$L))
+  }else {
+    post.mean.beta = t(sapply(1:mixtureComp$L, function(x) colMeans(mixtureComp$MixtureSamples$beta[, x, ])))
+  }
+  post.mean.sigma = colMeans(mixtureComp$MixtureSamples$sigma)
+  mixture.comp = exp(as.matrix(mixtureComp$X)%*%t(post.mean.beta))
+  mixture.comp = mixture.comp/rowSums(mixture.comp)
+  std.err.L = sapply(1:mixtureComp$L, function(x) dnorm(mixtureComp$y.std, 0, post.mean.sigma[x]))
+  
+  Likelihood = prod(rowSums(sapply(1:mixtureComp$L, function(x) mixture.comp[, x]*std.err.L[, x])))
+  loglike = log(Likelihood)
+  Deviance  = -2*loglike
+  L = mixtureComp$L
+  p = dim(mixtureComp$X)[2]
+  if(nuggetParam) {
+    free.param =  L*((p+1)+(p+2))
+    VAICscore = Deviance + 2*L*(p+1) + L*(p+2)
+  } else {
+    free.param =  L*((p+1)+(p+1))
+    VAICscore = Deviance + 2*L*(p+1) + L*(p+1)
+  }
+  return(list(Deviance  = Deviance, VAICscore = VAICscore, 
+              free.param = free.param))
+}
 
 
 
