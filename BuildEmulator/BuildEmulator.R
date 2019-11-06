@@ -423,8 +423,37 @@ InitialBasisEmulators <- function(tData, HowManyEmulators, additionalVariables=N
                                                                sigmaPrior = sigmaPrior, nuggetPrior = nuggetPrior, activePrior = activePrior, 
                                                                activeVariables = activeVariables, prior.params = prior.params, ...), silent = TRUE))
 }
+
+ValidPlotNew <- function(fit, x, y, ObsRange=FALSE, ...){
+  #' @param fit a data frame of emulator predictions. First column corresponds
+  #' to the posterior mean, second and third columns correspond to the lower
+  #' and upper quantiles (to be plotted) respectively.
+  #' @param x values of the inputs to be plotted on the x axis
+  #' @param y a vector of simulator evaluations at x
+  #' @param ObsRange. Boolean to indicate if the last row of fit represents the
+  #' observations and should not be plotted, but used to expand the ranges
+  #' @param ... usual arguments to plotting functions. 
+  inside <- c()
+  outside <- c()
+  for(i in 1:length(y)) {
+    if(fit[i, 2] <= y[i] & y[i] <= fit[i, 3]) {
+      inside <- c(inside,i)
+    }
+  }
+  outside <- c(1:length(y))[-inside]
+  tRange <- range(fit)
+  if(ObsRange){
+    fit <- fit[-nrow(fit),]
+  }
+  plot(x, fit[, 1], pch=20, ylim=tRange, ...)
+  arrows(x, fit[, 2], x, fit[, 3],
+         length=0.05, angle=90, code=3, col='black')
+  points(x[inside], y[inside], pch=20, col='green')
+  points(x[outside], y[outside], pch=20, col='red')
+}
+
 ValidPlot <- function(fit, X, y, interval = c(), axis = 1, heading = " ", 
-                      xrange = c(-1, 1), ParamNames, OriginalRanges = FALSE, RangeFile=NULL) {
+                      xrange = c(-1, 1), ParamNames) {
 #' Plots the emulator predictions together with error bars and true values.
 #'
 #' @param fit a data frame of emulator predictions. First column corresponds
@@ -458,15 +487,6 @@ ValidPlot <- function(fit, X, y, interval = c(), axis = 1, heading = " ",
   }
   outside <- c(1:length(y))[-inside]
   chosen_column <- which(colnames(X) == ParamNames[axis])
-  if(OriginalRanges){
-    if(is.null(RangeFile))
-      stop("Cannot plot on original ranges as no RangeFile Specified")
-    else if(TRY TO OPEN RANGE FILE AND FAIL){
-      stop("Invalid RangeFile given")
-    }
-    else
-      FIX XRANGES WHEN KNOW FILE FORMAT
-  }
   if(is.null(interval)) {
     plot(X[ , chosen_column], fit[, 1], pch=20, ylab='Y', 
          xlab=ParamNames[axis],
@@ -512,7 +532,7 @@ virtual.LOO <- function(Design, y, cls, sigma, H, beta, nugget) {
 }
 
 LOO.plot <- function(StanEmulator, ParamNames, 
-                     OriginalRanges = FALSE, RangeFile=NULL, Obs=NULL, ObsErr=NULL) {
+                     OriginalRanges = FALSE, RangeFile=NULL, Obs=NULL, ObsErr=NULL, ObsRange=FALSE) {
   #' Function to generate Leave-One-Out predictions.
   #' 
   #' @param StanEmulator a GP emulator from EMULATE.gpstan function.
@@ -525,6 +545,14 @@ LOO.plot <- function(StanEmulator, ParamNames,
   #' is called, a warning is thrown and the plot is given on [-1,1]
   #' @param Obs. The scalar value of the observations to be plotted as a dasked line if not NULL
   #' @param ObsErr. Observation error (scalar). If this is NULL when obs is not NULL, a warning is thrown.
+  #' @param OriginalRanges. If TRUE, LOOs will be plotted on the original parameter ranges
+  #' Those ranges will be read from a file containing the parameter ranges and whether the 
+  #' parameters are logged or not. Defaults to FALSE, where parameters will be plotted on [-1,1]
+  #' @param RangeFile A .R file that will be sourced in order to determine the ranges of the
+  #' parameters to be plotted and whether they are on a log scale or not. If NULL when OrignialRanges
+  #' is called, a warning is thrown and the plot is given on [-1,1]
+  #' @param ObsRange. Boolean to indicate if the plot window should have y ranges that include
+  #' obs uncertainty (defaults to FALSE to facilitate emulator diagnostics)
   #' 
   #' @return a data frame with three columns, with first column corresponding to posterior mean, 
   #' and second and third columns corresponding to the minus and plus two standard deviations.
@@ -541,6 +569,9 @@ LOO.plot <- function(StanEmulator, ParamNames,
   fit.stan <- data.frame(cbind(mean.predict.y, mean.predict.y-2*sd.predict.y, 
                                mean.predict.y + 2*sd.predict.y))
   names(fit.stan) <- c('posterior mean', 'lower quantile', 'upper quantile')
+  if(ObsRange){
+    fit.stan <- rbind(fit.stan, c(Obs, Obs-2*ObsErr,Obs+2*ObsErr))
+  }
   p <- length(ParamNames)
   if(p<2){
     par(mfrow = c(1, 1), mar=c(4, 4, 1, 1))
@@ -567,20 +598,58 @@ LOO.plot <- function(StanEmulator, ParamNames,
     par(mfrow = c(4, 4), mar=c(4, 4, 1, 1))
   }
   #par(mfrow = c(1, 3), mar=c(4, 4, 1, 1))
-    for(i in 1:p) {
-      try(aplot <- ValidPlot(fit.stan, StanEmulator$Design, StanEmulator$tF, interval = range(fit.stan), 
-                             axis = i, heading = "", ParamNames = ParamNames, 
-                             OriginalRanges = OriginalRanges, RangeFile=RangeFile), silent=TRUE)
-      if(!inherits(aplot, "try-error") & !is.null(Obs)){
-        abline(h=Obs, lty=2, col=4)
-        if(is.null(ObsErr))
-          warning("The observations do not have 0 error. Please add ObsErr else the plot will be misleading")
-        else{
-          abline(h=obs+3*ObsErr, col=4, lty=2)
-          abline(h=obs-3*ObsErr, col=4, lty=2)
-        }
+  theDesign <- StanEmulator$Design
+  if(OriginalRanges){
+    if(is.null(RangeFile))
+      stop("Cannot plot on original ranges as no RangeFile Specified")
+    else{
+      tRanFile <- try(source(RangeFile), silent=TRUE)
+      if(inherits(tRanFile, "try-error"))
+        stop("Invalid RangeFile given")
+      if(!is.null(param.names)
+         & !is.null(param.lows)
+         & !is.null(param.highs)
+         & !is.null(param.defaults)
+         & !is.null(which.logs)){
+        PlotOrder <- sapply(ParamNames, function(aName) which(param.names==aName))
+        #TRY LAPPLY IF THE ABOVE FAILS NEEDING NUMERIC VECTORS NOT STRINGS
+        #First cut design to just ParamNames in the order of ParamNames
+        DesignOrder <- sapply(ParamNames, function(aName) which(colnames(theDesign)==aName))
+        #Is design order a permutation? Think so (with cut columns)
+        PermutedDesign <- theDesign[,DesignOrder]
+        AllLogs <- rep(FALSE,length(param.names))
+        AllLogs[which.logs] <- TRUE
+        param.names <- param.names[PlotOrder]
+        param.lows <- param.lows[PlotOrder]
+        param.highs <- param.highs[PlotOrder]
+        NewLogs <- AllLogs[PlotOrder]
+        which.logs <- which(NewLogs)
+        theDesign <- DesignConvert(PermutedDesign, param.names = param.names, 
+                                   param.lows = param.lows, param.highs = param.highs, 
+                                   which.logs = which.logs)
       }
+      else
+        stop("Ranges file doesnt define the right variables")
     }
+  }
+  else{
+    which.logs <- c()
+  }
+  tlogs <- rep("",p)
+  tlogs[which.logs] <- "x"
+  for(i in 1:p) {
+    try(aplot <- ValidPlotNew(fit = fit.stan, x = theDesign[,i], y=StanEmulator$tF, 
+                              ObsRange = ObsRange, main = "", cex.main=0.8,
+                              xlab=ParamNames[i], log=tlogs[i]), silent=TRUE)
+    if(!inherits(aplot, "try-error") & !is.null(Obs)){
+      abline(h=Obs, lty=2, col=4)
+      if(is.null(ObsErr))
+        warning("The observations do not have 0 error. Please add ObsErr else the plot will be misleading")
+      else{
+        abline(h=Obs+2*ObsErr, col=4, lty=2)
+        abline(h=Obs-2*ObsErr, col=4, lty=2)
+      }      }
+  }
   return(fit.stan)
 }
 
@@ -629,5 +698,65 @@ ValidationStan <- function(NewData, Emulator, main = ""){
               heading = main, xrange = c(-1, 1), ParamNames = colnames(Emulator$Design)) 
   }
   fit.stan
+}
+
+##########################################################
+#Design conversion functions
+##########################################################
+#All require specification of 
+#param.lows (lower values of parameters)
+#param.highs (max values of parameters)
+#param.names (the names of the parameters)
+#which.logs (pointers for those parameters that were designed on log scale)
+#Mainly used in plotting
+
+#Function to convert [-1,1] LHC to given scale
+DesignConvert <- function(Xconts, param.names, param.lows, param.highs, which.logs=NULL){
+  if(!(length(param.names)==length(param.lows)))
+    stop("specify as many parameter names as parameter ranges")
+  else if(!(length(param.highs)==length(param.lows)))
+    stop("Mismatch in min and max values")
+  conversion <- function(anX,lows,highs){
+    ((anX+1)/2)*(highs-lows) +lows
+  }
+  param.lows.log <- param.lows
+  param.highs.log <- param.highs
+  param.lows.log[which.logs] <- log10(param.lows[which.logs])
+  param.highs.log[which.logs] <- log10(param.highs[which.logs])
+  tX <- sapply(1:length(param.lows), function(i) conversion(Xconts[,i],param.lows.log[i],param.highs.log[i]))
+  tX[,which.logs] <- 10^tX[,which.logs]
+  tX <- as.data.frame(tX)
+  names(tX) <- param.names
+  tX
+}
+
+#3. Function to convert [above scale to [-1, 1]
+#Probably need to pass parameter ranges to be safe
+DesignantiConvert <- function (Xconts){
+  anticonversion <- function(newX,lows,highs){
+    2*((newX-lows)/(highs-lows))-1
+  }
+  param.lows.log <- param.lows
+  param.highs.log <- param.highs
+  param.lows.log[which.logs] <- log10(param.lows[which.logs])
+  param.highs.log[which.logs] <- log10(param.highs[which.logs])
+  Xconts[,which.logs] <- log10(Xconts[,which.logs])
+  tX <- sapply(1:length(param.lows), function(i) anticonversion(Xconts[,i],param.lows.log[i],param.highs.log[i]))
+  tX <- as.data.frame(tX)
+  names(tX) <- param.names
+  tX
+}
+DesignantiConvert1D <- function (Xconts){
+  anticonversion <- function(newX,lows,highs){
+    2*((newX-lows)/(highs-lows))-1
+  }
+  param.lows.log <- param.lows
+  param.highs.log <- param.highs
+  param.lows.log[which.logs] <- log10(param.lows[which.logs])
+  param.highs.log[which.logs] <- log10(param.highs[which.logs])
+  Xconts[which.logs] <- log10(Xconts[which.logs])
+  tX <- sapply(1:length(param.lows), function(i) anticonversion(Xconts[i],param.lows.log[i],param.highs.log[i]))
+  tX <- as.data.frame(tX)
+  tX
 }
 
