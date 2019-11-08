@@ -6,8 +6,10 @@ library(reticulate)
 #exit
 #FROM THE MOGP_EMULATOR DIRECTORY
 #DW Run: setwd("/Users/danielwilliamson/Dropbox/BayesExeter/mogp_emulator")
+import_from_path("GetPythonFunctions", path="../ExeterUQ/TestingMoGP/")
 source_python("../ExeterUQ/TestingMoGP/GetPythonFunctions.py") #this worked before making use of branin$ obsolete. Find out why it doesnt work now
 branin <- import("mogp_emulator.tests.benchmark_branin")
+
 n_emulators = 3
 n_simulations = 15
 n_testing = 10
