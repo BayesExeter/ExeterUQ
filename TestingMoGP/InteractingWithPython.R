@@ -1,8 +1,8 @@
 library(reticulate)
-#Sys.setenv(RETICULATE_PYTHON = "/usr/local/bin/python3")
-#use_python("/usr/local/bin/python3")
-#reticulate::repl_python()
-#  from mogp_emulator.tests import benchmark_branin
+Sys.setenv(RETICULATE_PYTHON = "/usr/local/bin/python3")
+use_python("/usr/local/bin/python3")
+reticulate::repl_python()
+#from mogp_emulator.tests import benchmark_branin
 #exit
 #FROM THE MOGP_EMULATOR DIRECTORY
 #DW Run: setwd("/Users/danielwilliamson/Dropbox/BayesExeter/mogp_emulator")
@@ -13,6 +13,7 @@ branin <- import("mogp_emulator.tests.benchmark_branin")
 n_emulators = 3
 n_simulations = 15
 n_testing = 10
+training <- benchmark_branin$generate_training_data(n_emulators,n_simulations)
 training <- branin$generate_training_data(n_emulators,n_simulations)
 names(training) <- c("inputs", "outputs", "em_params")
 #Note training$inputs is nxd (15x2) and training$outputs is mxn (3x15)
