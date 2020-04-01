@@ -610,19 +610,23 @@ LOO.plot <- function(StanEmulator, ParamNames,
          & !is.null(param.lows)
          & !is.null(param.highs)
          & !is.null(param.defaults)
-         & !is.null(which.logs)){
+         #& !is.null(which.logs)
+         ){
         PlotOrder <- sapply(ParamNames, function(aName) which(param.names==aName))
         #TRY LAPPLY IF THE ABOVE FAILS NEEDING NUMERIC VECTORS NOT STRINGS
         #First cut design to just ParamNames in the order of ParamNames
         DesignOrder <- sapply(ParamNames, function(aName) which(colnames(theDesign)==aName))
-        #Is design order a permutation? Think so (with cut columns)
+        #Design order is a permutation with cut columns
+        if(is.list(DesignOrder))
+          DesignOrder <- unlist(DesignOrder)
         PermutedDesign <- theDesign[,DesignOrder]
         AllLogs <- rep(FALSE,length(param.names))
         AllLogs[which.logs] <- TRUE
-        param.names <- param.names[PlotOrder]
-        param.lows <- param.lows[PlotOrder]
-        param.highs <- param.highs[PlotOrder]
-        NewLogs <- AllLogs[PlotOrder]
+        toInc <- which(names(PlotOrder)%in%colnames(PermutedDesign))
+        param.names <- param.names[PlotOrder[toInc]]
+        param.lows <- param.lows[PlotOrder[toInc]]
+        param.highs <- param.highs[PlotOrder[toInc]]
+        NewLogs <- AllLogs[PlotOrder[toInc]]
         which.logs <- which(NewLogs)
         theDesign <- DesignConvert(PermutedDesign, param.names = param.names, 
                                    param.lows = param.lows, param.highs = param.highs, 
