@@ -309,7 +309,7 @@ EMULATOR.gpstan <- function(x, Emulator, GP=TRUE, FastVersion=FALSE,  CompiledMo
       StandardDev <- sqrt(tVariance)
     }
     else{
-      fit.y2 <- sampling(CompiledModelPredict, 
+      fit.y2 <- rstan::sampling(CompiledModelPredict, 
                          data = list(X1 = Emulator$Design, X2 = Xpred, y1= Emulator$tF, 
                                      H1 = Emulator$H, H2 = Hpred, N1 = dim(Emulator$Design)[1], N2 = dim(Xpred)[1],  
                                      Np = dim(Emulator$H)[2], p = dim(Emulator$Design)[2], M = dim(Emulator$ParameterSamples$beta)[1], 
@@ -317,7 +317,7 @@ EMULATOR.gpstan <- function(x, Emulator, GP=TRUE, FastVersion=FALSE,  CompiledMo
                                      delta = Emulator$ParameterSamples$delta_par, nugget = Emulator$ParameterSamples$nugget),
                          iter = 1, warmup = 0, chains = 1, cores = 1, pars = c("tmeans","tsds"), include=TRUE, 
                          algorithm = c('Fixed_param'))
-      predict.y2 <- extract(fit.y2, pars = c('tmeans','tsds'))
+      predict.y2 <- rstan::extract(fit.y2, pars = c('tmeans','tsds'))
       tExpectation <- predict.y2$tmeans[1, ]
       StandardDev <- predict.y2$tsds[1, ]
     }

@@ -158,7 +158,7 @@ MIXTURE.design <- function(formula, tData.mixture, L=2,
   BayesMixture <- sampling(CompiledModel, data = list(N = length(std.err), D = dim(H)[2], 
                                                       K = L, y = std.err, x = H), 
                            iter = 10000, warmup=5000, chains = 2, cores = 4)
-  MixtureSamples <- extract(BayesMixture, pars = c('beta', 'sigma'))
+  MixtureSamples <- rstan::extract(BayesMixture, pars = c('beta', 'sigma'))
   # extract only the posterior mean for mixture matrix for design set
   MixtureMat <- summary(BayesMixture, pars = 'mixture_vec')$summary[, 1]
   MixtureMat <- t(matrix(MixtureMat, nrow = L))
@@ -334,7 +334,7 @@ EMULATE.gpstanNSt <- function(meanResponse, CompiledModelFit = model_fit_nst, si
                              pars = c('nugget', 'sigma', 'delta_par', 'beta', 'log_lik'),...)
     
   }
-  ParameterSamples <- extract(StanEmulator, pars = c('sigma', 'delta_par', 'beta', 'nugget'))
+  ParameterSamples <- rstan::extract(StanEmulator, pars = c('sigma', 'delta_par', 'beta', 'nugget'))
   if(FastVersion){
     lps <- extract_log_lik(StanEmulator)
     tMAP <- which.max(rowSums(lps))
@@ -544,7 +544,7 @@ EMULATOR.gpstanNSt <- function(x, Emulator, mixtureComp, GP=TRUE, FastVersion=FA
     }
     else{ 
       A2 <- t(MIXTURE.predict(XX, mixtureComp, FastVersion = FALSE))
-      fit.y2 <- sampling(CompiledModelPredict, 
+      fit.y2 <- rstan::sampling(CompiledModelPredict, 
                          data = list(N1 = dim(Emulator$Design)[1], N2 = dim(Xpred)[1], 
                                      p = dim(Emulator$Design)[2], M = dim(Emulator$ParameterSamples$beta)[1], 
                                      Np = dim(Emulator$H)[2], L = L, X1 = Emulator$Design, X2 = Xpred, y1 = Emulator$tF, 
@@ -553,7 +553,7 @@ EMULATOR.gpstanNSt <- function(x, Emulator, mixtureComp, GP=TRUE, FastVersion=FA
                                      nugget = Emulator$ParameterSamples$nugget), 
                          iter = 1, warmup = 0, chains = 1, cores = 1, pars = c("tmeans", "tsds"), include = TRUE, 
                          algorithm = c('Fixed_param'))
-      predict.y2 <- extract(fit.y2, pars = c('tmeans','tsds'))
+      predict.y2 <- rstan::extract(fit.y2, pars = c('tmeans','tsds'))
       tExpectation <- predict.y2$tmeans[1,]
       StandardDev <- predict.y2$tsds[1,]
     }

@@ -117,7 +117,7 @@ imp.layout01 <- function(ImpList,VarNames,VariableDensity=TRUE,newPDF=FALSE,the.
 		plot.new()
 		plot.window(c(0,1),c(0,1))
 		rect(0,0,1,1)
-		text(0.5,0.5,labels=VarNames[k],cex=10/n)
+		text(0.5,0.5,labels=VarNames[k],cex=5/n)
 		if(k==1){
 			arrows(0,0,0,1.01,col=1,code=2,lwd=0.8,length=0.1)
 			arrows(0,0,1.01,0,col=1,code=2,lwd=0.8,length=0.1)
@@ -247,7 +247,7 @@ imp.layout01 <- function(ImpList,VarNames,VariableDensity=TRUE,newPDF=FALSE,the.
 		plot.new()
 		plot.window(c(-1,1),c(-1,1))
 		rect(-1,-1,1,1)
-		text(0,0,labels=VarNames[k],cex=10/n)
+		text(0,0,labels=VarNames[k],cex=5/n)
 		if(k==1){
 			arrows(-1,-1,-1,1.01,col=1,code=2,lwd=0.8,length=0.1)
 			arrows(-1,-1,1.01,-1,col=1,code=2,lwd=0.8,length=0.1)
